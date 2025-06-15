@@ -86,7 +86,9 @@ const LeaveRequest: React.FC = () => {
 
       // Load leave requests and balance
       const [leaveRequestsResponse, leaveBalanceResponse] = await Promise.all([
-        apiService.getLeaveRequests({ year: currentYear }),
+        // apiService.getLeaveRequests({ year: currentYear }),
+        apiService.getLeaveRequestByLecturer(),
+
         apiService.getLeaveBalance(currentYear),
       ]);
 

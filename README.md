@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 AUCA-HR-System
 This is a Next.js project bootstrapped with create-next-app.
 Getting Started
@@ -22,3 +23,6 @@ You can check out the Next.js GitHub repository - your feedback and contribution
 Deploy on Vercel
 The easiest way to deploy your Next.js app is to use the Vercel Platform from the creators of Next.js.
 Check out our Next.js deployment documentation for more details.
+=======
+# HR-system
+>>>>>>> c64985bc173663b00f46e7b8377c01586a68a71b

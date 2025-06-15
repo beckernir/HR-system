@@ -207,7 +207,6 @@
 // const apiService = new ApiService();
 // export default apiService;
 
-
 class ApiService {
   constructor() {
     this.baseURL =
@@ -385,6 +384,9 @@ class ApiService {
     return this.get(`/api/v1/leaves/${id}`);
   }
 
+  async getLeaveRequestByLecturer() {
+    return this.get(`/api/v1/leaves/my-requests`);
+  }
   async updateLeaveRequest(id, leaveData) {
     return this.put(`/api/v1/leaves/${id}`, leaveData);
   }

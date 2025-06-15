@@ -46,11 +46,12 @@ interface UserProfile {
 }
 
 interface ProfilePageProps {
-  userId?: string | null; // Made nullable to handle current user case
+  userId?: string | null;
   apiService: {
     getCurrentUser: () => Promise<any>;
     getUserProfile: (userId: string) => Promise<any>;
   };
+  userData?: any; // Add this to accept pre-fetched data
 }
 
 // Loading Component
@@ -371,19 +372,36 @@ const ProfilePage: React.FC<{ profile: UserProfile }> = ({ profile }) => {
 const ProfilePageContainer: React.FC<ProfilePageProps> = ({
   userId,
   apiService,
+  userData: preloadedUserData, // Accept pre-fetched data
 }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!preloadedUserData);
   const [error, setError] = useState<string | null>(null);
 
   // Function to map API response to ProfileProps format
-  const mapApiResponseToProfile = (apiData: any): UserProfile => {
-    return {
-      id: apiData.id || apiData.userId,
+  const mapApiResponseToProfile = (apiResponse: any): UserProfile => {
+    // FIXED: Handle nested response structure
+    console.log("=== MAPPING API RESPONSE ===");
+    console.log("Raw API Response:", apiResponse);
+    
+    // Extract the actual user data from the response
+    // Handle different response structures: response.data, response.user, or direct response
+    const apiData = apiResponse?.data || apiResponse?.user || apiResponse;
+    
+    console.log("Extracted API Data:", apiData);
+    console.log("API Data Keys:", Object.keys(apiData || {}));
+    
+    if (!apiData) {
+      throw new Error("No user data found in API response");
+    }
+
+    const mappedProfile = {
+      id: apiData.id || apiData.userId || userId,
       name:
         apiData.name ||
         apiData.fullName ||
-        `${apiData.firstName || ""} ${apiData.lastName || ""}`.trim(),
+        `${apiData.firstName || ""} ${apiData.lastName || ""}`.trim() ||
+        "Unknown User",
       age: apiData.age || calculateAge(apiData.dateOfBirth) || 25,
       gender: apiData.gender || "Not specified",
       jobTitle: apiData.jobTitle || apiData.position || "Not specified",
@@ -392,8 +410,8 @@ const ProfilePageContainer: React.FC<ProfilePageProps> = ({
       nationality: apiData.nationality || "Not specified",
       phoneNumber: apiData.phone || apiData.phoneNumber || "Not provided",
       contactEmail: apiData.email || apiData.contactEmail || "Not provided",
-      visaStatus: apiData.visaStatus || "Valid",
-      visaMonths: apiData.visaMonths || 12,
+      visaStatus: apiData.visaStatus || apiData.workingVisaStatus || "Valid",
+      visaMonths: apiData.visaMonths || apiData.visaValidityMonths || 12,
       yearsToRetire:
         apiData.yearsToRetire ||
         calculateYearsToRetire(apiData.dateOfBirth) ||
@@ -405,6 +423,11 @@ const ProfilePageContainer: React.FC<ProfilePageProps> = ({
       workExperience: apiData.workExperience || [],
       education: apiData.education || [],
     };
+
+    console.log("Mapped Profile:", mappedProfile);
+    console.log("=============================");
+    
+    return mappedProfile;
   };
 
   // Helper function to calculate age from date of birth
@@ -431,7 +454,7 @@ const ProfilePageContainer: React.FC<ProfilePageProps> = ({
     return Math.max(0, retirementAge - currentAge);
   };
 
-  // Fetch profile data - FIXED LOGIC
+  // Fetch profile data
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -447,6 +470,7 @@ const ProfilePageContainer: React.FC<ProfilePageProps> = ({
         response = await apiService.getCurrentUser();
       }
 
+      console.log("API Response received:", response);
       const mappedProfile = mapApiResponseToProfile(response);
       setProfile(mappedProfile);
     } catch (err) {
@@ -459,10 +483,23 @@ const ProfilePageContainer: React.FC<ProfilePageProps> = ({
     }
   };
 
-  // Effect to fetch profile on component mount or userId change
+  // Effect to handle preloaded data or fetch profile
   useEffect(() => {
-    fetchProfile();
-  }, [userId]); // Re-run when userId changes
+    if (preloadedUserData) {
+      console.log("Using preloaded user data:", preloadedUserData);
+      try {
+        const mappedProfile = mapApiResponseToProfile(preloadedUserData);
+        setProfile(mappedProfile);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error mapping preloaded data:", err);
+        setError("Failed to process user data");
+        setLoading(false);
+      }
+    } else {
+      fetchProfile();
+    }
+  }, [userId, preloadedUserData]);
 
   // Render loading state
   if (loading) {
