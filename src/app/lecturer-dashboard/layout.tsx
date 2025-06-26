@@ -17,7 +17,9 @@ import HelpIcon from "@mui/icons-material/Help";
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/Header2";
+import apiService from "@/lib/apiService"; // Update this path to your actual apiService location
 
 const navItems = [
   {
@@ -81,10 +83,47 @@ const bottomNavItems = [
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [textVisible, setTextVisible] = React.useState(true);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
   const pathname = usePathname();
+  const router = useRouter();
 
   const toggleTextVisibility = () => {
     setTextVisible(!textVisible);
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+
+    try {
+      // Call the logout API
+      await apiService.logout();
+
+      // Clear the token from localStorage
+      localStorage.removeItem("jwt_token");
+
+      // Clear any other user-related data if needed
+      localStorage.removeItem("user_data");
+      sessionStorage.clear();
+
+      // Redirect to login page
+      router.push("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+
+      // Even if API call fails, clear local storage and redirect
+      // This ensures user is logged out on the client side
+      localStorage.removeItem("jwt_token");
+
+      // Optionally show error message to user
+      // You can use a toast notification library here
+      console.warn("Logout API failed, but user has been logged out locally.");
+
+      // Redirect anyway
+      router.push("/");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -149,6 +188,18 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     },
                   }}
                 >
+                  {isActive && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        left: -8,
+                        width: 7,
+                        height: 53,
+                        bgcolor: "#09498a",
+                        borderRadius: "11px",
+                      }}
+                    />
+                  )}
                   <ListItemIcon
                     sx={{
                       minWidth: 40,
@@ -178,7 +229,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           <List>
             {bottomNavItems.map((item, index) => (
               <ListItem key={index}>
-                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 40, color: "#808080" }}>
+                  {item.icon}
+                </ListItemIcon>
                 <ListItemText
                   primary={item.text}
                   primaryTypographyProps={{
@@ -199,6 +252,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               variant="contained"
               fullWidth
               startIcon={<LogoutIcon />}
+              onClick={handleLogout}
+              disabled={isLoggingOut}
               sx={{
                 bgcolor: "#09498a",
                 borderRadius: "14px",
@@ -206,9 +261,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 textTransform: "none",
                 fontSize: "1.4rem",
                 display: textVisible ? "flex" : "none",
+                "&:disabled": {
+                  bgcolor: "#09498a",
+                  opacity: 0.6,
+                },
               }}
             >
-              Logout
+              {isLoggingOut ? "Logging out..." : "Logout"}
             </Button>
           </Box>
         </Box>
