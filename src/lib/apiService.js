@@ -237,6 +237,8 @@
 // // Create a singleton instance
 // const apiService = new ApiService();
 // export default apiService;
+
+
 class ApiService {
   constructor() {
     this.baseURL =
@@ -459,6 +461,9 @@ class ApiService {
   // ==================== USER MANAGEMENT METHODS ====================
   async getUserProfile(userId) {
     return this.get(`/api/users/${userId}`);
+  }
+  async getUserEmail(userEmail) {
+    return this.get(`/api/users/email/${userEmail}`);
   }
 
   async updateUserProfile(userData) {
