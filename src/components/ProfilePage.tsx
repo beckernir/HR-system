@@ -17,9 +17,9 @@ interface UserProfile {
   fullNames: string;
   age: number;
   gender: string;
-  jobTitle: string;
-  jobType: string;
-  location: string;
+  workingPosition: string;
+  contractType: string;
+  religion: string;
   nationality: string;
   phoneNumber: string;
   contactEmail: string;
@@ -27,7 +27,7 @@ interface UserProfile {
   visaMonths: number;
   yearsToRetire: number;
   rating: number;
-  profileImage: File;
+  photo: File;
   maritalStatus?: string;
   workExperience?: Array<{
     company: string;
@@ -95,16 +95,16 @@ const ProfilePage: React.FC<{ profile: UserProfile }> = ({ profile }) => {
     fullNames,
     age,
     gender,
-    jobTitle,
-    jobType,
-    location,
+    workingPosition,
+    contractType,
+    religion,
     nationality,
     phoneNumber,
     contactEmail,
     visaMonths,
     yearsToRetire,
     rating,
-    profileImage,
+    photo,
     maritalStatus = "Single",
     workExperience = [],
     education = [],
@@ -130,7 +130,7 @@ const ProfilePage: React.FC<{ profile: UserProfile }> = ({ profile }) => {
           <div className="relative">
             <div className="w-32 h-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg">
               <img
-                src={profileImage || "/default-avatar.png"}
+                src={photo || "/default-avatar.png"}
                 alt={fullNames}
                 width={128}
                 height={128}
@@ -206,9 +206,9 @@ const ProfilePage: React.FC<{ profile: UserProfile }> = ({ profile }) => {
 
             <div className="mt-6">
               <div className="flex items-center flex-wrap gap-2">
-                <h3 className="font-medium text-lg">{jobTitle}</h3>
+                <h3 className="font-medium text-lg">{workingPosition}</h3>
                 <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                  {jobType}
+                  {contractType}
                 </span>
               </div>
 
@@ -233,7 +233,7 @@ const ProfilePage: React.FC<{ profile: UserProfile }> = ({ profile }) => {
                       d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                     />
                   </svg>
-                  {location}
+                  {religion}
                 </div>
                 <div className="flex items-center text-gray-600 text-sm">
                   <span className="mr-1">|</span>
@@ -404,9 +404,9 @@ const ProfilePageContainer: React.FC<ProfilePageProps> = ({
         "Unknown User",
       age: apiData.age || calculateAge(apiData.dateOfBirth) || 25,
       gender: apiData.gender || "Not specified",
-      jobTitle: apiData.jobTitle || apiData.position || "Not specified",
-      jobType: apiData.jobType || apiData.employmentType || "Full-time",
-      location: apiData.location || apiData.address || "Not specified",
+      workingPosition: apiData.workingPosition || apiData.position || "Not specified",
+      contractType: apiData.contractType || apiData.employmentType || "Full-time",
+      religion: apiData.religion || apiData.address || "Not specified",
       nationality: apiData.nationality || "Not specified",
       phoneNumber: apiData.phone || apiData.phoneNumber || "Not provided",
       contactEmail: apiData.email || apiData.contactEmail || "Not provided",
@@ -417,8 +417,8 @@ const ProfilePageContainer: React.FC<ProfilePageProps> = ({
         calculateYearsToRetire(apiData.dateOfBirth) ||
         30,
       rating: apiData.rating || apiData.performanceRating || 4,
-      profileImage:
-        apiData.profileImage || apiData.avatar || "/default-avatar.png",
+      photo:
+        apiData.photo || apiData.avatar || "/default-avatar.png",
       maritalStatus: apiData.maritalStatus || "Single",
       workExperience: apiData.workExperience || [],
       education: apiData.education || [],

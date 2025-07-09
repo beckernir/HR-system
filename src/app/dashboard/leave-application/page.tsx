@@ -5,6 +5,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import SortIcon from "@mui/icons-material/Sort";
 import DownloadIcon from "@mui/icons-material/Download";
 
+
 import {
   Autocomplete,
   Box,
@@ -31,9 +32,13 @@ import {
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import apiService from "@/lib/apiService"; // adjust import as needed
+import LeaveReportButton from "@/components/leaveButtonReport";
+
 
 
 const AdminDashboard = () => {
+  const [sortColumn, setSortColumn] = useState(0); // 0 = first column, 1 = second column, etc.
+  const [sortDirection, setSortDirection] = useState("asc");
   const router = useRouter();
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [filteredRequests, setFilteredRequests] = useState([]);
@@ -59,7 +64,10 @@ const AdminDashboard = () => {
           request.lecturerName
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          request.lecturerEmail
+            request.leaveType
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          request.status
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           request.id?.toString().includes(searchTerm)
@@ -69,7 +77,6 @@ const AdminDashboard = () => {
       setFilteredRequests(leaveRequests);
     }
   }, [searchTerm, leaveRequests]);
-
 
   const fetchLeaveRequests = async () => {
     try {
@@ -84,7 +91,7 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
-  
+
   const handleAction = async (request, action) => {
     setSelectedRequest(request);
     setActionType(action);
@@ -314,22 +321,11 @@ const AdminDashboard = () => {
             >
               Sort by earliest
             </Button>
-
-            <Button
-              variant="outlined"
-              endIcon={<DownloadIcon />}
-              sx={{
-                borderRadius: "12px",
-                borderColor: "rgba(0, 0, 0, 0.58)",
-                color: "rgba(0, 0, 0, 0.62)",
-                textTransform: "none",
-                fontFamily: "Outfit-Light, Helvetica",
-                fontWeight: 300,
-                fontSize: "16px",
-              }}
-            >
-              Generate Report
-            </Button>
+            <LeaveReportButton
+              variant="dropdown"
+              search={searchTerm} 
+              orderDirection={sortDirection} 
+            />
           </Stack>
         </Box>
 

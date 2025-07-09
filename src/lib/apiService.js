@@ -1,244 +1,3 @@
-// class ApiService {
-//   constructor() {
-//     this.baseURL =
-//       process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:9005";
-//     this.defaultHeaders = {
-//       "Content-Type": "application/json",
-//     };
-//   }
-
-//   // Get auth headers with token
-//   getAuthHeaders() {
-//     const token = this.getToken();
-//     return {
-//       ...this.defaultHeaders,
-//       ...(token && { Authorization: `Bearer ${token}` }),
-//     };
-//   }
-
-//   // Get token from localStorage
-//   getToken() {
-//     if (typeof window !== "undefined") {
-//       return localStorage.getItem("jwt_token");
-//     }
-//     return null;
-//   }
-
-//   // Handle authentication failure
-//   handleAuthFailure() {
-//     if (typeof window !== "undefined") {
-//       localStorage.removeItem("jwt_token");
-//       localStorage.removeItem("refresh_token");
-//       window.location.href = "/login";
-//     }
-//   }
-
-//   // Generic request method with simple 401 handling
-//   async request(endpoint, options = {}) {
-//     const url = `${this.baseURL}${endpoint}`;
-//     const config = {
-//       headers: this.getAuthHeaders(),
-//       credentials: "include",
-//       ...options,
-//       headers: {
-//         ...this.getAuthHeaders(),
-//         ...options.headers,
-//       },
-//     };
-
-//     try {
-//       const response = await fetch(url, config);
-
-//       // Handle 401 Unauthorized - redirect to login
-//       if (response.status === 401) {
-//         const isAuthEndpoint =
-//           endpoint.includes("/auth/login") ||
-//           endpoint.includes("/auth/register");
-
-//         if (!isAuthEndpoint) {
-//           this.handleAuthFailure();
-//           throw new Error("Session expired. Please login again.");
-//         }
-//       }
-
-//       if (!response.ok) {
-//         // Try to get error message from response
-//         const errorData = await response.json().catch(() => null);
-//         const errorMessage =
-//           errorData?.message || `HTTP error! status: ${response.status}`;
-//         throw new Error(errorMessage);
-//       }
-
-//       // Check if response has content and if it's JSON
-//       const contentType = response.headers.get("content-type");
-//       const contentLength = response.headers.get("content-length");
-
-//       // If no content or content-length is 0, return success object
-//       if (contentLength === "0" || !contentType) {
-//         return { success: true, message: "Operation completed successfully" };
-//       }
-
-//       // If content-type indicates JSON, parse as JSON
-//       if (contentType && contentType.includes("application/json")) {
-//         const data = await response.json();
-//         return data;
-//       } else {
-//         // If it's text or other format, return as text
-//         const text = await response.text();
-//         return { success: true, message: text };
-//       }
-//     } catch (error) {
-//       console.error("API request failed:", error);
-//       throw error;
-//     }
-//   }
-
-//   // HTTP Methods
-//   async get(endpoint, options = {}) {
-//     return this.request(endpoint, { method: "GET", ...options });
-//   }
-
-//   async post(endpoint, data, options = {}) {
-//     return this.request(endpoint, {
-//       method: "POST",
-//       body: JSON.stringify(data),
-//       ...options,
-//     });
-//   }
-
-//   async put(endpoint, data, options = {}) {
-//     return this.request(endpoint, {
-//       method: "PUT",
-//       body: JSON.stringify(data),
-//       ...options,
-//     });
-//   }
-
-//   async delete(endpoint, options = {}) {
-//     return this.request(endpoint, { method: "DELETE", ...options });
-//   }
-
-//   // Authentication methods
-//   async login(email, password) {
-//     const response = await this.post("/api/v1/auth/login", { email, password });
-
-//     // Store tokens after successful login
-//     if (response.accessToken) {
-//       localStorage.setItem("jwt_token", response.accessToken);
-//     }
-//     if (response.refreshToken) {
-//       localStorage.setItem("refresh_token", response.refreshToken);
-//     }
-
-//     return response;
-//   }
-
-//   async logout() {
-//     try {
-//       await this.post("/api/v1/auth/logout");
-//     } finally {
-//       // Clear tokens regardless of logout API success
-//       if (typeof window !== "undefined") {
-//         localStorage.removeItem("jwt_token");
-//         localStorage.removeItem("refresh_token");
-//       }
-//     }
-//   }
-
-//   // User Profile methods
-//   async getCurrentUser() {
-//     return this.get("/api/users/profile");
-//   }
-
-//   async getUserProfile(userId) {
-//     return this.get(`/api/users/${userId}`);
-//   }
-
-//   async updateUserProfile(userData) {
-//     return this.put("/api/users/profile", userData);
-//   }
-
-//   // Leave Management API methods
-//   async createLeaveRequest(leaveData) {
-//     return this.post("/api/v1/leaves", leaveData);
-//   }
-
-//   async getLeaveRequests(params = {}) {
-//     const queryString = new URLSearchParams(params).toString();
-//     const endpoint = queryString
-//       ? `/api/v1/leaves?${queryString}`
-//       : "/api/v1/leaves";
-//     return this.get(endpoint);
-//   }
-
-//   async getLeaveRequestById(id) {
-//     return this.get(`/api/v1/leaves/${id}`);
-//   }
-
-//   async getLeaveRequestByLecturer() {
-//     return this.get(`/api/v1/leaves/my-requests`);
-//   }
-//   async updateLeaveRequest(id, leaveData) {
-//     return this.put(`/api/v1/leaves/${id}`, leaveData);
-//   }
-
-//   async deleteLeaveRequest(id) {
-//     return this.delete(`/api/v1/leaves/${id}`);
-//   }
-
-//   async approveLeaveRequest(id) {
-//     return this.put(`/api/v1/leaves/${id}/approve`);
-//   }
-
-//   async rejectLeaveRequest(id, reason = "") {
-//     return this.put(`/api/v1/leaves/${id}/reject`, { reason });
-//   }
-
-//   async cancelLeaveRequest(id) {
-//     return this.put(`/api/v1/leaves/${id}/cancel`);
-//   }
-
-//   async getLeaveBalance(year = new Date().getFullYear()) {
-//     return this.get(`/api/v1/leaves/balance?year=${year}`);
-//   }
-
-//   async getLeaveTypes() {
-//     return this.get("/api/v1/leaves/types");
-//   }
-
-//   // Notification API methods
-//   async getNotifications() {
-//     return this.get("/api/v1/notifications");
-//   }
-
-//   async getUnreadNotifications() {
-//     return this.get("/api/v1/notifications/unread");
-//   }
-
-//   async getUnreadNotificationsCount() {
-//     const response = await this.get("/api/v1/notifications/unread/count");
-//     // Handle both direct number response and object response
-//     return typeof response === "number" ? response : response.count || 0;
-//   }
-
-//   async markNotificationAsRead(notificationId) {
-//     return this.put(`/api/v1/notifications/${notificationId}/read`);
-//   }
-
-//   async markAllNotificationsAsRead() {
-//     return this.put("/api/v1/notifications/mark-all-read");
-//   }
-
-//   async deleteReadNotifications() {
-//     return this.delete("/api/v1/notifications/read");
-//   }
-// }
-
-// // Create a singleton instance
-// const apiService = new ApiService();
-// export default apiService;
-
-
 class ApiService {
   constructor() {
     this.baseURL =
@@ -445,15 +204,15 @@ class ApiService {
       try {
         return await this.get("/api/users/profile");
       } catch (secondError) {
-        try {
-          return await this.get("/api/v1/auth/me");
-        } catch (thirdError) {
-          console.error(
-            "Failed to fetch current user from all endpoints:",
-            thirdError
-          );
-          throw thirdError;
-        }
+        // try {
+        //   return await this.get("/api/v1/auth/me");
+        // } catch (thirdError) {
+        //   console.error(
+        //     "Failed to fetch current user from all endpoints:",
+        //     thirdError
+        //   );
+        //   throw thirdError;
+        // }
       }
     }
   }
@@ -478,42 +237,6 @@ class ApiService {
   async getAllUsers() {
     return this.get("/api/users");
   }
-
-  // ==================== MESSAGING METHODS ====================
-  // async getConversations() {
-  //   return this.get("/conversations");
-  // }
-
-  // async getMessages(userId) {
-  //   return this.get(`/messages/${userId}`);
-  // }
-
-  // async sendMessage(recipientId, content, messageType = "text") {
-  //   return this.post("/messages", {
-  //     recipientId,
-  //     content,
-  //     messageType,
-  //   });
-  // }
-
-  // async markMessagesAsRead(userId) {
-  //   return this.post(`/messages/${userId}/read`);
-  // }
-
-  // async deleteMessage(messageId) {
-  //   return this.delete(`/messages/${messageId}`);
-  // }
-
-  // async getUnreadMessagesCount() {
-  //   try {
-  //     const response = await this.get("/messages/unread/count");
-  //     return typeof response === "number" ? response : response.count || 0;
-  //   } catch (error) {
-  //     console.error("Failed to get unread messages count:", error);
-  //     return 0;
-  //   }
-  // }
-  // ==================== MESSAGING METHODS ====================
   async getConversations() {
     // Updated to match backend endpoint
     return this.get("/api/chat/partners");
@@ -523,16 +246,6 @@ class ApiService {
     // Updated to match backend endpoint
     return this.get(`/api/chat/conversation/private/${userId}`);
   }
-
-  // async sendMessage(recipientId, content, messageType = "text") {
-  //   // This endpoint might need to be implemented in backend
-  //   // or use WebSocket for sending messages
-  //   return this.post("/api/chat/messages", {
-  //     recipientId,
-  //     content,
-  //     messageType,
-  //   });
-  // }
 
   async sendMessage(recipientId, content, messageType = "text") {
     console.log("Sending message with recipientId:", recipientId);
@@ -795,6 +508,388 @@ class ApiService {
       }));
     } catch (error) {
       console.error("Batch request failed:", error);
+      throw error;
+    }
+  }
+
+  // ==================== LEAVE REPORT METHODS ====================
+
+  // Generic method to handle file downloads
+  async downloadFile(endpoint, filename, params = {}) {
+    const token = this.getToken();
+
+    // Check token validity
+    if (!this.validateToken(token) || this.isTokenExpired(token)) {
+      this.handleAuthFailure();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    Object.keys(params).forEach((key) => {
+      if (
+        params[key] !== null &&
+        params[key] !== undefined &&
+        params[key] !== ""
+      ) {
+        queryParams.append(key, params[key]);
+      }
+    });
+
+    const url = `${this.baseURL}${endpoint}${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    const config = {
+      method: "GET",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      credentials: "include",
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        this.handleAuthFailure();
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage =
+          errorData?.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const blob = await response.blob();
+
+      // Download the file
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      return { success: true, message: "File downloaded successfully" };
+    } catch (error) {
+      console.error("File download failed:", error);
+      throw error;
+    }
+  }
+
+  // Generate PDF Report
+  async generatePdfReport(
+    search = "",
+    orderColumn = null,
+    orderDirection = "asc"
+  ) {
+    const params = {};
+    if (search) params.search = search;
+    if (orderColumn !== null) params.orderColumn = orderColumn;
+    if (orderDirection) params.orderDirection = orderDirection;
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    const filename = `leaves_report_${timestamp}.pdf`;
+
+    return this.downloadFile("/api/leave-reports/pdf", filename, params);
+  }
+
+  // Generate CSV Report
+  async generateCsvReport(
+    search = "",
+    orderColumn = null,
+    orderDirection = "asc"
+  ) {
+    const params = {};
+    if (search) params.search = search;
+    if (orderColumn !== null) params.orderColumn = orderColumn;
+    if (orderDirection) params.orderDirection = orderDirection;
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    const filename = `leaves_report_${timestamp}.csv`;
+
+    return this.downloadFile("/api/leave-reports/csv", filename, params);
+  }
+
+  // Generate Excel Report
+  async generateExcelReport(
+    search = "",
+    orderColumn = null,
+    orderDirection = "asc"
+  ) {
+    const params = {};
+    if (search) params.search = search;
+    if (orderColumn !== null) params.orderColumn = orderColumn;
+    if (orderDirection) params.orderDirection = orderDirection;
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    const filename = `leaves_report_${timestamp}.xlsx`;
+
+    return this.downloadFile("/api/leave-reports/excel", filename, params);
+  }
+
+  // Alternative method that returns blob for custom handling
+  async getReportBlob(
+    format,
+    search = "",
+    orderColumn = null,
+    orderDirection = "asc"
+  ) {
+    const token = this.getToken();
+
+    // Check token validity
+    if (!this.validateToken(token) || this.isTokenExpired(token)) {
+      this.handleAuthFailure();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+    if (orderColumn !== null) params.append("orderColumn", orderColumn);
+    if (orderDirection) params.append("orderDirection", orderDirection);
+
+    const endpoint = `/api/leave-reports/${format}`;
+    const url = `${this.baseURL}${endpoint}?${params.toString()}`;
+
+    const config = {
+      method: "GET",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      credentials: "include",
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      if (response.status === 401) {
+        this.handleAuthFailure();
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage =
+          errorData?.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error("Report generation failed:", error);
+      throw error;
+    }
+  }
+
+  // Worker Report API Methods
+
+  // Generate Worker PDF Report
+  async generateWorkerPdfReport(reportParams = {}) {
+    const {
+      search = "",
+      orderColumn = null,
+      orderDirection = "asc",
+      departmentId = null,
+      status = null,
+      dateRange = null,
+    } = reportParams;
+
+    const params = {};
+    if (search) params.search = search;
+    if (orderColumn !== null) params.orderColumn = orderColumn;
+    if (orderDirection) params.orderDirection = orderDirection;
+    if (departmentId !== null) params.departmentId = departmentId;
+    if (status !== null) params.status = status;
+    if (dateRange !== null) {
+      if (dateRange.startDate) params.startDate = dateRange.startDate;
+      if (dateRange.endDate) params.endDate = dateRange.endDate;
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    const filename = `workers_report_${timestamp}.pdf`;
+
+    return this.downloadFile("/api/workers/reports/pdf", filename, params);
+  }
+
+  // Generate Worker CSV Report
+  async generateWorkerCsvReport(reportParams = {}) {
+    const {
+      search = "",
+      orderColumn = null,
+      orderDirection = "asc",
+      departmentId = null,
+      status = null,
+      dateRange = null,
+    } = reportParams;
+
+    const params = {};
+    if (search) params.search = search;
+    if (orderColumn !== null) params.orderColumn = orderColumn;
+    if (orderDirection) params.orderDirection = orderDirection;
+    if (departmentId !== null) params.departmentId = departmentId;
+    if (status !== null) params.status = status;
+    if (dateRange !== null) {
+      if (dateRange.startDate) params.startDate = dateRange.startDate;
+      if (dateRange.endDate) params.endDate = dateRange.endDate;
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    const filename = `workers_report_${timestamp}.csv`;
+
+    return this.downloadFile("/api/workers/reports/csv", filename, params);
+  }
+
+  // Generate Worker Excel Report
+  async generateWorkerExcelReport(reportParams = {}) {
+    const {
+      search = "",
+      orderColumn = null,
+      orderDirection = "asc",
+      departmentId = null,
+      status = null,
+      dateRange = null,
+    } = reportParams;
+
+    const params = {};
+    if (search) params.search = search;
+    if (orderColumn !== null) params.orderColumn = orderColumn;
+    if (orderDirection) params.orderDirection = orderDirection;
+    if (departmentId !== null) params.departmentId = departmentId;
+    if (status !== null) params.status = status;
+    if (dateRange !== null) {
+      if (dateRange.startDate) params.startDate = dateRange.startDate;
+      if (dateRange.endDate) params.endDate = dateRange.endDate;
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    const filename = `workers_report_${timestamp}.xlsx`;
+
+    return this.downloadFile("/api/workers/reports/excel", filename, params);
+  }
+
+  // Alternative method that returns blob for custom handling (Worker)
+  async generateWorkerReportBlob(format = "pdf", reportParams = {}) {
+    const {
+      search = "",
+      orderColumn = null,
+      orderDirection = "asc",
+      departmentId = null,
+      status = null,
+      dateRange = null,
+    } = reportParams;
+
+    const params = {};
+    if (search) params.search = search;
+    if (orderColumn !== null) params.orderColumn = orderColumn;
+    if (orderDirection) params.orderDirection = orderDirection;
+    if (departmentId !== null) params.departmentId = departmentId;
+    if (status !== null) params.status = status;
+    if (dateRange !== null) {
+      if (dateRange.startDate) params.startDate = dateRange.startDate;
+      if (dateRange.endDate) params.endDate = dateRange.endDate;
+    }
+
+    const token = this.getToken();
+
+    // Check token validity
+    if (!this.validateToken(token) || this.isTokenExpired(token)) {
+      this.handleAuthFailure();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    Object.keys(params).forEach((key) => {
+      if (
+        params[key] !== null &&
+        params[key] !== undefined &&
+        params[key] !== ""
+      ) {
+        queryParams.append(key, params[key]);
+      }
+    });
+
+    const endpoint = `/api/workers/reports/${format}`;
+    const url = `${this.baseURL}${endpoint}${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    const config = {
+      method: "GET",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      credentials: "include",
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        this.handleAuthFailure();
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage =
+          errorData?.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const blob = await response.blob();
+      return blob;
+    } catch (error) {
+      console.error("Worker report generation failed:", error);
+      throw error;
+    }
+  }
+
+  // Get Worker Report Status (if you have async report generation)
+  async getWorkerReportStatus(reportId) {
+    const token = this.getToken();
+
+    if (!this.validateToken(token) || this.isTokenExpired(token)) {
+      this.handleAuthFailure();
+      throw new Error("Session expired. Please login again.");
+    }
+
+    const url = `${this.baseURL}/api/worker/reports/status/${reportId}`;
+
+    const config = {
+      method: "GET",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      if (response.status === 401) {
+        this.handleAuthFailure();
+        throw new Error("Session expired. Please login again.");
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage =
+          errorData?.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Failed to get worker report status:", error);
       throw error;
     }
   }

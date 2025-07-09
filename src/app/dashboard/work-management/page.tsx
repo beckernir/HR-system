@@ -56,9 +56,12 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
+import apiService from "@/lib/apiService"; // adjust import as needed
+import WorkerReportButton from "@/components/workerReportButton"; // adjust import as needed
 
 // Define the Worker interface
 interface Worker {
@@ -70,8 +73,9 @@ interface Worker {
   academicRank: string;
 }
 
-
 export default function AdminDashboard() {
+  const [sortColumn, setSortColumn] = useState(0); // 0 = first column, 1 = second column, etc.
+  const [sortDirection, setSortDirection] = useState("asc");
   const route = useRouter();
   // Type the workers state with the Worker interface
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -84,10 +88,18 @@ export default function AdminDashboard() {
   });
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // New state for search, filter, and pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [nidFilter, setNidFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // You can make this configurable
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://localhost:9005/api/users");
+        const response = await axios.get(
+          "http://localhost:9005/api/users?size=1000"
+        );
         console.log("API Response:", response.data); // Debug log
 
         // Handle ApiResponse structure
@@ -111,6 +123,46 @@ export default function AdminDashboard() {
 
     fetchUsers();
   }, []);
+
+  // Filter and search logic
+  const filteredWorkers = useMemo(() => {
+    let filtered = workers;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (worker) =>
+          worker.fullNames.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          worker.phoneNumber.includes(searchTerm) ||
+          worker.workingPosition
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          worker.academicRank.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply NID filter
+    if (nidFilter) {
+      filtered = filtered.filter((worker) =>
+        worker.nationality.toLowerCase().includes(nidFilter.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [workers, searchTerm, nidFilter]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredWorkers.length / itemsPerPage);
+  const currentWorkers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredWorkers.slice(startIndex, endIndex);
+  }, [filteredWorkers, currentPage, itemsPerPage]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, nidFilter]);
 
   // Delete user function
   const handleDeleteClick = (worker: Worker) => {
@@ -154,6 +206,26 @@ export default function AdminDashboard() {
 
   const handleSnackbarClose = () => {
     setSnackbar({ ...snackbar, open: false });
+  };
+
+  // Handle search input change
+  const handleSearchChange = (event: React.SyntheticEvent, value: string) => {
+    setSearchTerm(value);
+  };
+
+  // Handle NID filter change
+  const handleNidFilterChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setNidFilter(event.target.value);
+  };
+
+  // Handle page change
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
+    setCurrentPage(page);
   };
 
   // Navigation items
@@ -202,17 +274,19 @@ export default function AdminDashboard() {
                 fontWeight: "medium",
               }}
             >
-              Workers List
+              Workers List ({filteredWorkers.length})
             </Typography>
             <Box sx={{ flexGrow: 1, mx: 2 }}>
               <Autocomplete
                 freeSolo
                 options={[]}
+                inputValue={searchTerm}
+                onInputChange={handleSearchChange}
                 sx={{ width: 292 }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    placeholder="Search worker name"
+                    placeholder="Search worker name, phone, position..."
                     variant="outlined"
                     sx={{
                       bgcolor: "#d0d4d8",
@@ -229,6 +303,24 @@ export default function AdminDashboard() {
                 )}
               />
             </Box>
+            {/* NID Filter */}
+            <Box sx={{ mx: 1 }}>
+              <TextField
+                placeholder="Filter by NID"
+                variant="outlined"
+                size="small"
+                value={nidFilter}
+                onChange={handleNidFilterChange}
+                sx={{
+                  bgcolor: "#f5f5f5",
+                  borderRadius: "0.75rem",
+                  width: 150,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "0.75rem",
+                  },
+                }}
+              />
+            </Box>
             <Button
               variant="contained"
               endIcon={<SortIcon />}
@@ -243,18 +335,11 @@ export default function AdminDashboard() {
               Fulltime
             </Button>
             <Box sx={{ ml: 2 }}>
-              <Button
-                variant="outlined"
-                endIcon={<DownloadIcon />}
-                sx={{
-                  borderRadius: "0.75rem",
-                  borderColor: "#00000094",
-                  color: "#0000009e",
-                  textTransform: "none",
-                }}
-              >
-                Generate Report
-              </Button>
+              <WorkerReportButton
+                            variant="dropdown"
+                            search={searchTerm} 
+                            orderDirection={sortDirection} 
+                          />
             </Box>
           </Box>
 
@@ -264,6 +349,9 @@ export default function AdminDashboard() {
                 <TableRow
                   sx={{ bgcolor: "#515252c9", borderRadius: "10px 10px 0 0" }}
                 >
+                  <TableCell sx={{ color: "white", fontWeight: "medium" }}>
+                    #
+                  </TableCell>
                   <TableCell sx={{ color: "white", fontWeight: "medium" }}>
                     ID
                   </TableCell>
@@ -288,9 +376,12 @@ export default function AdminDashboard() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {Array.isArray(workers) &&
-                  workers.map((worker) => (
+                {Array.isArray(currentWorkers) &&
+                  currentWorkers.map((worker, index) => (
                     <TableRow key={worker.id}>
+                      <TableCell>
+                        {(currentPage - 1) * itemsPerPage + index + 1}
+                      </TableCell>
                       <TableCell>{worker.id}</TableCell>
                       <TableCell>{worker.fullNames}</TableCell>
                       <TableCell>{worker.phoneNumber}</TableCell>
@@ -307,31 +398,24 @@ export default function AdminDashboard() {
                         </IconButton>
 
                         <IconButton
-                            onClick={() => {
-                              route.push(`/dashboard/profile/${worker.id}`); // Pass user ID as URL parameter
-                            }}
-                            color="primary"
-                            size="small"
-                          >
-                        {/* <IconButton
                           onClick={() => {
-                            router.push({
-                              pathname: "/dashboard/profile",
-                              query: { userId: worker.id },
-                            });
+                            route.push(`/dashboard/profile/${worker.id}`);
                           }}
                           color="primary"
                           size="small"
-                        > */}
+                        >
                           <EditIcon />
                         </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
-                {(!Array.isArray(workers) || workers.length === 0) && (
+                {(!Array.isArray(currentWorkers) ||
+                  currentWorkers.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ textAlign: "center", py: 4 }}>
-                      No workers found
+                    <TableCell colSpan={8} sx={{ textAlign: "center", py: 4 }}>
+                      {searchTerm || nidFilter
+                        ? "No workers found matching your search criteria"
+                        : "No workers found"}
                     </TableCell>
                   </TableRow>
                 )}
@@ -339,18 +423,34 @@ export default function AdminDashboard() {
             </Table>
           </TableContainer>
 
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-            <Pagination
-              count={13}
-              page={1}
-              renderItem={(item) => (
-                <PaginationItem
-                  slots={{ previous: ArrowBackIcon, next: ArrowForwardIcon }}
-                  {...item}
-                  sx={{ color: "#005cbb" }}
-                />
-              )}
-            />
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={handlePageChange}
+                renderItem={(item) => (
+                  <PaginationItem
+                    slots={{ previous: ArrowBackIcon, next: ArrowForwardIcon }}
+                    {...item}
+                    sx={{ color: "#005cbb" }}
+                  />
+                )}
+              />
+            </Box>
+          )}
+
+          {/* Pagination info */}
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Showing{" "}
+              {currentWorkers.length > 0
+                ? (currentPage - 1) * itemsPerPage + 1
+                : 0}{" "}
+              to {Math.min(currentPage * itemsPerPage, filteredWorkers.length)}{" "}
+              of {filteredWorkers.length} workers
+            </Typography>
           </Box>
         </Box>
       </Box>
